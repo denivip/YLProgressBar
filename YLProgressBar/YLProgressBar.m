@@ -29,7 +29,7 @@
 #import "ARCMacro.h"
 
 // Sizes
-#define YLProgressBarSizeInset              1
+#define YLProgressBarSizeInset              4
 #define YLProgressBarSizeStripeWidth        7
 
 // Colors
@@ -105,8 +105,8 @@
     self.progressOffset = (self.progressOffset > 2 * YLProgressBarSizeStripeWidth - 1) ? 0 : ++self.progressOffset;
     
     // Draw the background track
-    [self drawBackgroundWithRect:rect];
-    
+//    [self drawBackgroundWithRect:rect];
+//    
     if (self.progress > 0)
     {
         CGRect innerRect = CGRectMake(YLProgressBarSizeInset,
@@ -116,7 +116,7 @@
         
         [self drawProgressBarWithRect:innerRect];
         [self drawStripesWithRect:innerRect];
-        [self drawGlossWithRect:innerRect];
+//        [self drawGlossWithRect:innerRect];
     }
 }
 
