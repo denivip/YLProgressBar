@@ -25,6 +25,7 @@
  */
 
 #import "YLProgressBar.h"
+#import <QuartzCore/QuartzCore.h>
 
 #import "ARCMacro.h"
 
