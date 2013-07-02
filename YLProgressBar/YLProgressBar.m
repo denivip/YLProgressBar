@@ -43,7 +43,7 @@
 }
 @property (nonatomic, assign)               double      progressOffset;
 @property (nonatomic, assign)               CGFloat     cornerRadius;
-@property (nonatomic, SAFE_ARC_PROP_RETAIN) NSTimer*    animationTimer;
+@property (nonatomic, SAFE_ARC_PROP_RETAIN) CADisplayLink *displayLink;
 
 /** Init the progress bar. */
 - (void)initializeProgressBar;
@@ -63,17 +63,17 @@
 @end
 
 @implementation YLProgressBar
-@synthesize progressOffset, cornerRadius, animationTimer;
+@synthesize progressOffset, cornerRadius, displayLink;
 @synthesize animated;
 
 - (void)dealloc
 {
-    if (animationTimer && [animationTimer isValid])
+    if (displayLink)
     {
-        [animationTimer invalidate];
+        [displayLink invalidate];
     }
     
-    SAFE_ARC_RELEASE (animationTimer);
+    SAFE_ARC_RELEASE (displayLink);
     SAFE_ARC_RELEASE (_progressTintColor);
     SAFE_ARC_RELEASE (_progressTintColorDark);
     
@@ -140,32 +140,25 @@
     return _progressTintColor;
 }
 
+- (CADisplayLink *)displayLink
+{
+    if (! displayLink) {
+        displayLink = [CADisplayLink displayLinkWithTarget:self
+                                                  selector:@selector(setNeedsDisplay)];
+        displayLink.frameInterval = 2;
+        [displayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSDefaultRunLoopMode];
+    }
+
+    return displayLink;
+}
+
 #pragma mark -
 #pragma mark YLProgressBar Public Methods
 
 - (void)setAnimated:(BOOL)_animated
 {
     animated = _animated;
-    
-    if (animated)
-    {
-        if (self.animationTimer == nil)
-        {
-            self.animationTimer = [NSTimer scheduledTimerWithTimeInterval:1.0/30 
-                                                                   target:self 
-                                                                 selector:@selector(setNeedsDisplay)
-                                                                 userInfo:nil
-                                                                  repeats:YES];
-        }
-    } else
-    {
-        if (self.animationTimer && [animationTimer isValid])
-        {
-            [animationTimer invalidate];
-        }
-        
-        self.animationTimer = nil;
-    }
+    self.displayLink.paused = !animated;
 }
 
 #pragma mark YLProgressBar Private Methods
@@ -173,7 +166,7 @@
 - (void)initializeProgressBar
 {
     self.progressOffset     = 0;
-    self.animationTimer     = nil;
+    self.displayLink        = nil;
     self.animated           = YES;
 }
 
