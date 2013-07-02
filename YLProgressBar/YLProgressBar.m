@@ -152,6 +152,15 @@
     return displayLink;
 }
 
+- (void)didMoveToSuperview
+{
+    [super didMoveToSuperview];
+
+    if (displayLink) {
+        displayLink.paused = (self.superview == nil || !animated);
+    }
+}
+
 #pragma mark -
 #pragma mark YLProgressBar Public Methods
 
