@@ -140,7 +140,12 @@
 {
     [super didMoveToSuperview];
 
-    _displayLink.paused = (self.superview == nil || !_animated);
+    if (self.superview == nil) {
+        [_displayLink invalidate];
+    }
+    else {
+        self.displayLink.paused = !_animated;
+    }
 }
 
 #pragma mark -
@@ -157,7 +162,7 @@
 - (void)initializeProgressBar
 {
     self.progressOffset     = 0;
-    [self.displayLink invalidate];
+    [_displayLink invalidate];
     self.displayLink        = nil;
     self.animated           = YES;
 }
