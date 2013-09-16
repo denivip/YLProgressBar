@@ -27,8 +27,6 @@
 #import "YLProgressBar.h"
 #import <QuartzCore/QuartzCore.h>
 
-#import "ARCMacro.h"
-
 // Sizes
 #define YLProgressBarSizeInset              4
 #define YLProgressBarSizeStripeWidth        7
@@ -37,14 +35,14 @@
 #define YLProgressBarColorBackground        [UIColor colorWithRed:0.0980f green:0.1137f blue:0.1294f alpha:1.0f]
 #define YLProgressBarColorBackgroundGlow    [UIColor colorWithRed:0.0666f green:0.0784f blue:0.0901f alpha:1.0f]
 
-@interface YLProgressBar ()
-{
+@interface YLProgressBar () {
     UIColor* _progressTintColor;
-    UIColor* _progressTintColorDark;
 }
-@property (nonatomic, assign)               double      progressOffset;
-@property (nonatomic, assign)               CGFloat     cornerRadius;
-@property (nonatomic, SAFE_ARC_PROP_RETAIN) CADisplayLink *displayLink;
+
+@property (nonatomic) double progressOffset;
+@property (nonatomic) CGFloat cornerRadius;
+@property (nonatomic, weak) CADisplayLink *displayLink;
+@property (nonatomic, weak) NSTimer *animationTimer;
 
 /** Init the progress bar. */
 - (void)initializeProgressBar;
@@ -64,21 +62,10 @@
 @end
 
 @implementation YLProgressBar
-@synthesize progressOffset, cornerRadius, displayLink;
-@synthesize animated;
 
 - (void)dealloc
 {
-    if (displayLink)
-    {
-        [displayLink invalidate];
-    }
-    
-    SAFE_ARC_RELEASE (displayLink);
-    SAFE_ARC_RELEASE (_progressTintColor);
-    SAFE_ARC_RELEASE (_progressTintColorDark);
-    
-    SAFE_ARC_SUPER_DEALLOC ();
+    [_displayLink invalidate];
 }
 
 -(id)initWithFrame:(CGRect)frameRect
@@ -106,8 +93,7 @@
     self.progressOffset = (self.progressOffset > 2 * YLProgressBarSizeStripeWidth - 1) ? 0 : ++self.progressOffset;
     
     // Draw the background track
-//    [self drawBackgroundWithRect:rect];
-//    
+
     if (self.progress > 0)
     {
         CGRect innerRect = CGRectMake(YLProgressBarSizeInset,
@@ -117,19 +103,17 @@
         
         [self drawProgressBarWithRect:innerRect];
         [self drawStripesWithRect:innerRect];
-//        [self drawGlossWithRect:innerRect];
     }
 }
 
 - (void)setProgressTintColor:(UIColor *)aProgressTintColor
 {
-    SAFE_ARC_RELEASE(_progressTintColor);
-    _progressTintColor = SAFE_ARC_RETAIN(aProgressTintColor);
+    _progressTintColor = aProgressTintColor;
     const CGFloat* components = CGColorGetComponents(_progressTintColor.CGColor);
-    _progressTintColorDark = SAFE_ARC_RETAIN([UIColor colorWithRed:components[0] / 4.0f
-                                                             green:components[1] / 4.0f
-                                                              blue:components[2] / 4.0f
-                                                             alpha:CGColorGetAlpha(_progressTintColor.CGColor)]);
+    _progressTintColorDark = [UIColor colorWithRed:components[0] / 4.0f
+                                             green:components[1] / 4.0f
+                                              blue:components[2] / 4.0f
+                                             alpha:CGColorGetAlpha(_progressTintColor.CGColor)];
 }
 
 - (UIColor*)progressTintColor
@@ -143,32 +127,29 @@
 
 - (CADisplayLink *)displayLink
 {
-    if (! displayLink) {
-        displayLink = [CADisplayLink displayLinkWithTarget:self
-                                                  selector:@selector(setNeedsDisplay)];
-        displayLink.frameInterval = 2;
-        [displayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSDefaultRunLoopMode];
+    if (! _displayLink) {
+        _displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(setNeedsDisplay)];
+        _displayLink.frameInterval = 2;
+        [_displayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSDefaultRunLoopMode];
     }
 
-    return displayLink;
+    return _displayLink;
 }
 
 - (void)didMoveToSuperview
 {
     [super didMoveToSuperview];
 
-    if (displayLink) {
-        displayLink.paused = (self.superview == nil || !animated);
-    }
+    _displayLink.paused = (self.superview == nil || !_animated);
 }
 
 #pragma mark -
 #pragma mark YLProgressBar Public Methods
 
-- (void)setAnimated:(BOOL)_animated
+- (void)setAnimated:(BOOL)animated_
 {
-    animated = _animated;
-    self.displayLink.paused = !animated;
+    _animated = animated_;
+    self.displayLink.paused = !_animated;
 }
 
 #pragma mark YLProgressBar Private Methods
@@ -176,6 +157,7 @@
 - (void)initializeProgressBar
 {
     self.progressOffset     = 0;
+    [self.displayLink invalidate];
     self.displayLink        = nil;
     self.animated           = YES;
 }
@@ -206,21 +188,21 @@
         [[UIColor colorWithRed:1.0f green:1.0f blue:1.0f alpha:0.2] set];
         
         UIBezierPath* shadow        = [UIBezierPath bezierPathWithRoundedRect:CGRectMake(0.5, 0, rect.size.width - 1, rect.size.height - 1) 
-                                                          cornerRadius:cornerRadius];
+                                                          cornerRadius:_cornerRadius];
         [shadow stroke];
         
         // Draw the track
         [YLProgressBarColorBackground set];
         
-        UIBezierPath* roundedRect   = [UIBezierPath bezierPathWithRoundedRect:CGRectMake(0, 0, rect.size.width, rect.size.height-1) cornerRadius:cornerRadius];
+        UIBezierPath* roundedRect   = [UIBezierPath bezierPathWithRoundedRect:CGRectMake(0, 0, rect.size.width, rect.size.height-1) cornerRadius:_cornerRadius];
         [roundedRect fill];
         
         // Draw the inner glow
         [YLProgressBarColorBackgroundGlow set];
         
         CGMutablePathRef glow       = CGPathCreateMutable();
-        CGPathMoveToPoint(glow, NULL, cornerRadius, 0);
-        CGPathAddLineToPoint(glow, NULL, rect.size.width - cornerRadius, 0);
+        CGPathMoveToPoint(glow, NULL, _cornerRadius, 0);
+        CGPathAddLineToPoint(glow, NULL, rect.size.width - _cornerRadius, 0);
         CGContextAddPath(context, glow);
         CGContextDrawPath(context, kCGPathStroke);
         CGPathRelease(glow);
@@ -236,11 +218,10 @@
     
     CGContextSaveGState(context);
     {
-        UIBezierPath *progressBounds    = [UIBezierPath bezierPathWithRoundedRect:rect cornerRadius:cornerRadius];
+        UIBezierPath *progressBounds    = [UIBezierPath bezierPathWithRoundedRect:rect cornerRadius:_cornerRadius];
         CGContextAddPath(context, [progressBounds CGPath]);
         CGContextClip(context);
 
-//        size_t num_locations            = 2;
         CGFloat locations[]             = {0.0, 1.0};
         CFArrayRef colors = (__bridge CFArrayRef) [NSArray arrayWithObjects:(id)_progressTintColorDark.CGColor,
                                           (id)self.progressTintColor.CGColor, 
@@ -301,7 +282,7 @@
     }
     CGContextRestoreGState(context);
     
-    UIBezierPath *progressBounds    = [UIBezierPath bezierPathWithRoundedRect:rect cornerRadius:cornerRadius];
+    UIBezierPath *progressBounds    = [UIBezierPath bezierPathWithRoundedRect:rect cornerRadius:_cornerRadius];
     
     // Draw progress bar glow
     CGContextSaveGState(context);
@@ -339,7 +320,7 @@
         }
         
         // Clip the progress frame
-        UIBezierPath *clipPath = [UIBezierPath bezierPathWithRoundedRect:rect cornerRadius:cornerRadius];
+        UIBezierPath *clipPath = [UIBezierPath bezierPathWithRoundedRect:rect cornerRadius:_cornerRadius];
         
         CGContextAddPath(context, [clipPath CGPath]);
         CGContextClip(context);
